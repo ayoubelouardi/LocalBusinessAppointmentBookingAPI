@@ -1,163 +1,66 @@
-# API Documentation
+# **Local Business Appointment Booking API: Specification & ERD**
 
-## Base URL
+## **1\. Entity Relationship Diagram (ERD)**
+
+The following diagram illustrates the data structure and relationships between Businesses, Services, and Bookings.
 
 ```
-http://localhost:8000/api/
-```
+erDiagram
+    BUSINESS_PROFILE {
+        string business_id PK
+        string name
+        string address
+        string phone
+        string email
+    }
 
-## Endpoints
+    SERVICE {
+        string service_id PK
+        string business_id FK
+        string name
+        string description
+        float price
+    }
 
-### Services
+    BOOKING {
+        string booking_id PK
+        string customer_name
+        string booking_date
+        string start_time
+        string service_id FK
+    }
 
-#### List all services
-```
-GET /services/
-```
-
-#### Create a service
-```
-POST /services/
-```
-
-Request body:
-```json
-{
-  "name": "Haircut",
-  "description": "Standard haircut service",
-  "duration_minutes": 30,
-  "price": 25.00
-}
-```
-
-#### Get service details
-```
-GET /services/{id}/
-```
-
-#### Update a service
-```
-PUT /services/{id}/
+    BUSINESS_PROFILE ||--o{ SERVICE : "provides"
+    SERVICE ||--o{ BOOKING : "books"
 ```
 
-#### Delete a service
-```
-DELETE /services/{id}/
-```
+### **Model Details**
 
----
+* **BusinessProfile:** Stores business-wide settings like operating hours.  
+* **Service:** Defines the offerings (e.g., "Men's Haircut") linked to a specific business.  
+* **Booking:** Captures customer details, the chosen service, and the scheduled time slot.
 
-### Business Profiles
+## **2\. API Endpoints**
 
-#### List all business profiles
-```
-GET /business-profiles/
-```
+The backend exposes the following RESTful endpoints to manage the booking lifecycle:
 
-#### Create a business profile
-```
-POST /business-profiles/
-```
+| Method | Endpoint | Description | Auth Required |
+| :---- | :---- | :---- | :---- |
+| **Service Management** |  |  |  |
+| GET | /api/services/ | List all services offered by the business. | No |
+| POST | /api/services/ | Create a new service (Admin only). | Yes |
+| PUT | /api/services/{id}/ | Update service details (price, duration). | Yes |
+| DELETE | /api/services/{id}/ | Remove a service from the offerings. | Yes |
+| **Availability** |  |  |  |
+| GET | /api/availability/ | Returns free time slots for a given ?date=. | No |
+| **Booking Operations** |  |  |  |
+| POST | /api/bookings/ | Create a new appointment request. | No |
+| PATCH | /api/bookings/{id}/confirm/ | Admin confirmation of a pending slot. | Yes |
+| PATCH | /api/bookings/{id}/cancel/ | Cancel an existing booking. | No/Yes |
+| **Business Schedule** |  |  |  |
+| GET | /api/schedule/ | View all bookings for a specific ?date=. | Yes |
 
-Request body:
-```json
-{
-  "name": "Joe's Salon",
-  "opening_time": "09:00:00",
-  "closing_time": "18:00:00"
-}
-```
+## **3\. Implementation Notes**
 
-#### Get business profile details
-```
-GET /business-profiles/{id}/
-```
-
----
-
-### Bookings
-
-#### List all bookings
-```
-GET /bookings/
-```
-
-#### Create a booking
-```
-POST /bookings/
-```
-
-Request body:
-```json
-{
-  "service": 1,
-  "customer_name": "John Doe",
-  "customer_email": "john@example.com",
-  "appointment_date": "2026-03-15",
-  "start_time": "10:00:00",
-  "end_time": "10:30:00",
-  "status": "pending"
-}
-```
-
-#### Get booking details
-```
-GET /bookings/{id}/
-```
-
-#### Update booking status
-```
-PATCH /bookings/{id}/
-```
-
-Request body (confirm):
-```json
-{
-  "status": "confirmed"
-}
-```
-
-Request body (cancel):
-```json
-{
-  "status": "cancelled"
-}
-```
-
-#### Delete a booking
-```
-DELETE /bookings/{id}/
-```
-
----
-
-## Response Formats
-
-### Success Response
-```json
-{
-  "id": 1,
-  "name": "Haircut",
-  "description": "Standard haircut service",
-  "duration_minutes": 30,
-  "price": "25.00"
-}
-```
-
-### Error Response
-```json
-{
-  "field_name": ["Error message"]
-}
-```
-
----
-
-## Status Codes
-
-- `200 OK` - Successful GET, PUT, PATCH
-- `201 Created` - Successful POST
-- `204 No Content` - Successful DELETE
-- `400 Bad Request` - Invalid request data
-- `404 Not Found` - Resource not found
-- `500 Internal Server Error` - Server error
+* **Validation:** The /bookings/ endpoint will automatically calculate the end\_time based on the Service.duration\_minutes.  
+* **Conflict Resolution:** The API uses Django ORM transactions to ensure no two bookings overlap for the same time slot.

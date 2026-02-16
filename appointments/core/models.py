@@ -13,6 +13,9 @@ class Service(models.Model):
 
 class BusinessProfile(models.Model):
     name = models.CharField(max_length=255)
+    address = models.CharField(max_length=255, blank=True)
+    phone = models.CharField(max_length=20, blank=True)
+    email = models.EmailField(blank=True)
     opening_time = models.TimeField()
     closing_time = models.TimeField()
 

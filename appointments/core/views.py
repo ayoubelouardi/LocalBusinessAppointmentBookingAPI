@@ -1,6 +1,7 @@
 from datetime import date
 
 from rest_framework import viewsets
+from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from .models import Service, BusinessProfile, Booking
@@ -28,6 +29,19 @@ class BusinessProfileViewSet(viewsets.ModelViewSet):
 class BookingViewSet(viewsets.ModelViewSet):
     queryset = Booking.objects.all()
     serializer_class = BookingSerializer
+
+    @action(detail=True, methods=["patch"], url_path="confirm")
+    def confirm(self, request, pk=None):
+        booking = self.get_object()
+        if booking.status != Booking.Status.PENDING:
+            return Response(
+                {"status": "Only pending bookings can be confirmed."},
+                status=400,
+            )
+        booking.status = Booking.Status.CONFIRMED
+        booking.save(update_fields=["status"])
+        serializer = self.get_serializer(booking)
+        return Response(serializer.data, status=200)
 
 
 class AvailabilityView(APIView):

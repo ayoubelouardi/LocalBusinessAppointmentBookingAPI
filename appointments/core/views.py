@@ -43,6 +43,18 @@ class BookingViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(booking)
         return Response(serializer.data, status=200)
 
+    @action(detail=True, methods=["patch"], url_path="cancel")
+    def cancel(self, request, pk=None):
+        booking = self.get_object()
+        if booking.status == Booking.Status.CANCELLED:
+            serializer = self.get_serializer(booking)
+            return Response(serializer.data, status=200)
+
+        booking.status = Booking.Status.CANCELLED
+        booking.save(update_fields=["status"])
+        serializer = self.get_serializer(booking)
+        return Response(serializer.data, status=200)
+
 
 class AvailabilityView(APIView):
     def get(self, request):

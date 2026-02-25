@@ -72,3 +72,26 @@ class AvailabilityView(APIView):
 
         slots = get_available_slots(target_date)
         return Response({"date": raw_date, "slots": slots}, status=200)
+
+
+class ScheduleView(APIView):
+    permission_classes = [IsAdminOrReadOnly]
+
+    def get(self, request):
+        raw_date = request.query_params.get("date")
+        if not raw_date:
+            return Response({"date": "Query parameter 'date' is required."}, status=400)
+
+        try:
+            target_date = date.fromisoformat(raw_date)
+        except ValueError:
+            return Response(
+                {"date": "Invalid format. Use YYYY-MM-DD."},
+                status=400,
+            )
+
+        bookings = Booking.objects.filter(appointment_date=target_date).order_by(
+            "start_time"
+        )
+        serializer = BookingSerializer(bookings, many=True)
+        return Response({"date": raw_date, "bookings": serializer.data}, status=200)

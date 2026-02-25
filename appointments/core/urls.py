@@ -5,6 +5,7 @@ from .views import (
     BusinessProfileViewSet,
     BookingViewSet,
     AvailabilityView,
+    ScheduleView,
 )
 
 router = DefaultRouter()
@@ -14,5 +15,6 @@ router.register(r"bookings", BookingViewSet)
 
 urlpatterns = [
     path("availability/", AvailabilityView.as_view(), name="availability"),
+    path("schedule/", ScheduleView.as_view(), name="schedule"),
     path("", include(router.urls)),
 ]

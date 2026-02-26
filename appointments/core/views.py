@@ -2,11 +2,12 @@ from datetime import date
 
 from rest_framework import viewsets
 from rest_framework.decorators import action
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from .models import Service, BusinessProfile, Booking
 from .serializers import ServiceSerializer, BusinessProfileSerializer, BookingSerializer
-from .permissions import IsAdminOrReadOnly
+from .permissions import IsAdminOrReadOnly, IsAdminUser
 from .filters import filter_services
 from .services import get_available_slots
 
@@ -24,11 +25,17 @@ class ServiceViewSet(viewsets.ModelViewSet):
 class BusinessProfileViewSet(viewsets.ModelViewSet):
     queryset = BusinessProfile.objects.all()
     serializer_class = BusinessProfileSerializer
+    permission_classes = [IsAdminOrReadOnly]
 
 
 class BookingViewSet(viewsets.ModelViewSet):
     queryset = Booking.objects.all()
     serializer_class = BookingSerializer
+
+    def get_permissions(self):
+        if self.action == "confirm":
+            return [IsAuthenticated(), IsAdminUser()]
+        return [AllowAny()]
 
     @action(detail=True, methods=["patch"], url_path="confirm")
     def confirm(self, request, pk=None):
@@ -75,7 +82,7 @@ class AvailabilityView(APIView):
 
 
 class ScheduleView(APIView):
-    permission_classes = [IsAdminOrReadOnly]
+    permission_classes = [IsAuthenticated, IsAdminUser]
 
     def get(self, request):
         raw_date = request.query_params.get("date")

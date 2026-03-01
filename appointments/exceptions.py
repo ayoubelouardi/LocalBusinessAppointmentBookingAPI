@@ -5,11 +5,18 @@ from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response
 from rest_framework.views import exception_handler
 
+from appointments.core.logging_utils import log_api_failure
+
 
 def custom_exception_handler(exc, context):
     response = exception_handler(exc, context)
 
     if response is not None:
+        request = context.get("request")
+        endpoint = request.path if request else "unknown"
+        log_api_failure(
+            endpoint, response.status_code, exc.__class__.__name__, response.data
+        )
         return Response(
             {
                 "error": {

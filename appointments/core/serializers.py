@@ -3,6 +3,7 @@ from datetime import datetime, timedelta
 from django.db import transaction
 from rest_framework import serializers
 
+from .logging_utils import log_booking_conflict
 from .models import Service, BusinessProfile, Booking
 
 
@@ -73,6 +74,12 @@ class BookingSerializer(serializers.ModelSerializer):
                 .exists()
             )
             if has_conflict:
+                log_booking_conflict(
+                    validated_data["appointment_date"],
+                    validated_data["start_time"],
+                    validated_data["end_time"],
+                    validated_data.get("customer_email", ""),
+                )
                 raise serializers.ValidationError(
                     {"start_time": "This time slot is already booked."}
                 )

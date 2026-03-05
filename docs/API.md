@@ -1,66 +1,131 @@
-# **Local Business Appointment Booking API: Specification & ERD**
+# Local Business Appointment Booking API
 
-## **1\. Entity Relationship Diagram (ERD)**
+## Base URL
 
-The following diagram illustrates the data structure and relationships between Businesses, Services, and Bookings.
+`/api/`
 
-```
-erDiagram
-    BUSINESS_PROFILE {
-        string business_id PK
-        string name
-        string address
-        string phone
-        string email
-    }
+## Authentication
 
-    SERVICE {
-        string service_id PK
-        string business_id FK
-        string name
-        string description
-        float price
-    }
+- Public read endpoints are open.
+- Admin write endpoints require authenticated staff users.
 
-    BOOKING {
-        string booking_id PK
-        string customer_name
-        string booking_date
-        string start_time
-        string service_id FK
-    }
+## Endpoints
 
-    BUSINESS_PROFILE ||--o{ SERVICE : "provides"
-    SERVICE ||--o{ BOOKING : "books"
+### Services
+
+- `GET /api/services/` list services (supports `name`, `min_price`, `max_price`, `min_duration`, `max_duration` query params)
+- `POST /api/services/` create service (admin only)
+- `GET /api/services/{id}/` retrieve service
+- `PUT /api/services/{id}/` update service (admin only)
+- `DELETE /api/services/{id}/` delete service (admin only)
+
+Create payload example:
+
+```json
+{
+  "name": "Haircut",
+  "description": "Standard haircut",
+  "duration_minutes": 30,
+  "price": "25.00"
+}
 ```
 
-### **Model Details**
+### Business Profile
 
-* **BusinessProfile:** Stores business-wide settings like operating hours.  
-* **Service:** Defines the offerings (e.g., "Men's Haircut") linked to a specific business.  
-* **Booking:** Captures customer details, the chosen service, and the scheduled time slot.
+- `GET /api/business-profiles/` list business profiles
+- `POST /api/business-profiles/` create business profile (admin only)
+- `GET /api/business-profiles/{id}/` retrieve profile
+- `PUT /api/business-profiles/{id}/` update profile (admin only)
+- `DELETE /api/business-profiles/{id}/` delete profile (admin only)
 
-## **2\. API Endpoints**
+Create payload example:
 
-The backend exposes the following RESTful endpoints to manage the booking lifecycle:
+```json
+{
+  "name": "Joe's Salon",
+  "address": "Main Street",
+  "phone": "123456789",
+  "email": "hello@joesalon.com",
+  "opening_time": "09:00:00",
+  "closing_time": "18:00:00"
+}
+```
 
-| Method | Endpoint | Description | Auth Required |
-| :---- | :---- | :---- | :---- |
-| **Service Management** |  |  |  |
-| GET | /api/services/ | List all services offered by the business. | No |
-| POST | /api/services/ | Create a new service (Admin only). | Yes |
-| PUT | /api/services/{id}/ | Update service details (price, duration). | Yes |
-| DELETE | /api/services/{id}/ | Remove a service from the offerings. | Yes |
-| **Availability** |  |  |  |
-| GET | /api/availability/ | Returns free time slots for a given ?date=. | No |
-| **Booking Operations** |  |  |  |
-| POST | /api/bookings/ | Create a new appointment request. | No |
-| PATCH | /api/bookings/{id}/confirm/ | Admin confirmation of a pending slot. | Yes |
-| PATCH | /api/bookings/{id}/cancel/ | Cancel an existing booking. | No/Yes |
-| **Business Schedule** |  |  |  |
-| GET | /api/schedule/ | View all bookings for a specific ?date=. | Yes |
+### Bookings
 
-## **3\. Implementation Notes**
+- `GET /api/bookings/` list bookings
+- `POST /api/bookings/` create booking request
+- `GET /api/bookings/{id}/` retrieve booking
+- `PATCH /api/bookings/{id}/confirm/` confirm pending booking (admin only)
+- `PATCH /api/bookings/{id}/cancel/` cancel booking (idempotent)
 
-* **Validation:** The /bookings/ endpoint will automatically calculate the end\_time based on the Service.duration\_minutes.  
-* **Conflict Resolution:** The API uses Django ORM transactions to ensure no two bookings overlap for the same time slot.
+Create payload example:
+
+```json
+{
+  "service": 1,
+  "customer_name": "John Doe",
+  "customer_email": "john@example.com",
+  "appointment_date": "2026-03-10",
+  "start_time": "10:00:00",
+  "status": "pending"
+}
+```
+
+Create response example:
+
+```json
+{
+  "id": 1,
+  "service": 1,
+  "service_name": "Haircut",
+  "customer_name": "John Doe",
+  "customer_email": "john@example.com",
+  "appointment_date": "2026-03-10",
+  "start_time": "10:00:00",
+  "end_time": "10:30:00",
+  "status": "pending"
+}
+```
+
+### Availability
+
+- `GET /api/availability/?date=YYYY-MM-DD` returns available slots
+
+Response example:
+
+```json
+{
+  "date": "2026-03-10",
+  "slots": [
+    {"start_time": "09:00", "end_time": "09:15"},
+    {"start_time": "09:15", "end_time": "09:30"}
+  ]
+}
+```
+
+### Schedule
+
+- `GET /api/schedule/?date=YYYY-MM-DD` returns bookings for the day (admin only)
+
+## Error Response Format
+
+```json
+{
+  "error": {
+    "code": 400,
+    "detail": {"field": ["error message"]},
+    "type": "ValidationError"
+  }
+}
+```
+
+## Status Codes
+
+- `200 OK` success read/update actions
+- `201 Created` successful resource creation
+- `400 Bad Request` validation errors
+- `401 Unauthorized` unauthenticated for protected endpoint
+- `403 Forbidden` authenticated but insufficient permissions
+- `404 Not Found` resource missing
+- `500 Internal Server Error` unexpected server error

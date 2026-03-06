@@ -40,6 +40,10 @@ A REST API for local businesses (salons, clinics, repair shops) to manage servic
    python manage.py runserver
    ```
 
+5. Open API docs:
+   - Swagger UI: `http://127.0.0.1:8000/api/docs/`
+   - OpenAPI schema: `http://127.0.0.1:8000/api/schema/`
+
 ## API Endpoints
 
 - `GET /api/services/` - List/Create services

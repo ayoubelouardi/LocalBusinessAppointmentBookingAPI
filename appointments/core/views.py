@@ -29,7 +29,7 @@ class BusinessProfileViewSet(viewsets.ModelViewSet):
 
 
 class BookingViewSet(viewsets.ModelViewSet):
-    queryset = Booking.objects.all()
+    queryset = Booking.objects.select_related("service").all()
     serializer_class = BookingSerializer
 
     def get_permissions(self):
@@ -97,8 +97,10 @@ class ScheduleView(APIView):
                 status=400,
             )
 
-        bookings = Booking.objects.filter(appointment_date=target_date).order_by(
-            "start_time"
+        bookings = (
+            Booking.objects.select_related("service")
+            .filter(appointment_date=target_date)
+            .order_by("start_time")
         )
         serializer = BookingSerializer(bookings, many=True)
         return Response({"date": raw_date, "bookings": serializer.data}, status=200)

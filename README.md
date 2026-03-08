@@ -66,6 +66,22 @@ A REST API for local businesses (salons, clinics, repair shops) to manage servic
 - Product plan: `docs/project_plan.md`
 - Review checklist: `docs/review_checklist.md`
 
+## Manual End-to-End API Test (curl)
+
+1. Start server:
+   ```bash
+   python manage.py runserver
+   ```
+2. Run curl test script from another terminal:
+   ```bash
+   ./testing/test_api_with_curl.sh
+   ```
+
+Optional environment variables:
+- `BASE_URL` (default: `http://127.0.0.1:8000`)
+- `ADMIN_USER` (default: `admin`)
+- `ADMIN_PASS` (default: `admin12345`)
+
 ## License
 
 MIT

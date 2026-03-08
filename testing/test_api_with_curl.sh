@@ -5,6 +5,16 @@ set -euo pipefail
 BASE_URL="${BASE_URL:-http://127.0.0.1:8000}"
 ADMIN_USER="${ADMIN_USER:-admin}"
 ADMIN_PASS="${ADMIN_PASS:-admin12345}"
+PYTHON_BIN="${PYTHON_BIN:-./venv/bin/python}"
+
+if [ ! -x "${PYTHON_BIN}" ]; then
+  if command -v python3 >/dev/null 2>&1; then
+    PYTHON_BIN="python3"
+  else
+    echo "Error: no usable Python interpreter found."
+    exit 1
+  fi
+fi
 
 echo "== Local Business Appointment Booking API curl test =="
 echo "Base URL: ${BASE_URL}"
@@ -12,8 +22,11 @@ echo "Base URL: ${BASE_URL}"
 # Step 0: Verify server is reachable before running tests.
 curl -sS "${BASE_URL}/api/" >/dev/null
 
+# Step 0.5: Ensure database schema is up to date before test data setup.
+"${PYTHON_BIN}" manage.py migrate --noinput >/dev/null
+
 # Step 1: Reset database test data and ensure a known admin account exists.
-python manage.py shell -c "from django.contrib.auth import get_user_model; from appointments.core.models import Booking, Service, BusinessProfile; Booking.objects.all().delete(); Service.objects.all().delete(); BusinessProfile.objects.all().delete(); User=get_user_model(); User.objects.filter(username='${ADMIN_USER}').delete(); User.objects.create_superuser(username='${ADMIN_USER}', email='admin@example.com', password='${ADMIN_PASS}')"
+"${PYTHON_BIN}" manage.py shell -c "from django.contrib.auth import get_user_model; from appointments.core.models import Booking, Service, BusinessProfile; Booking.objects.all().delete(); Service.objects.all().delete(); BusinessProfile.objects.all().delete(); User=get_user_model(); User.objects.filter(username='${ADMIN_USER}').delete(); User.objects.create_superuser(username='${ADMIN_USER}', email='admin@example.com', password='${ADMIN_PASS}')"
 
 echo
 echo "[1] Create Business Profile (admin-only)"
@@ -44,7 +57,9 @@ SERVICE_RESPONSE=$(curl -sS -u "${ADMIN_USER}:${ADMIN_PASS}" \
   }')
 echo "${SERVICE_RESPONSE}"
 
-SERVICE_ID=$(python -c "import json,sys; print(json.loads(sys.argv[1])['id'])" "${SERVICE_RESPONSE}")
+SERVICE_ID=$(
+  "${PYTHON_BIN}" -c "import json,sys; print(json.loads(sys.argv[1])['id'])" "${SERVICE_RESPONSE}"
+)
 
 echo
 echo "[3] List Services"
@@ -80,7 +95,9 @@ BOOKING_RESPONSE=$(curl -sS \
   }")
 echo "${BOOKING_RESPONSE}"
 
-BOOKING_ID=$(python -c "import json,sys; print(json.loads(sys.argv[1])['id'])" "${BOOKING_RESPONSE}")
+BOOKING_ID=$(
+  "${PYTHON_BIN}" -c "import json,sys; print(json.loads(sys.argv[1])['id'])" "${BOOKING_RESPONSE}"
+)
 
 echo
 echo "[7] Prevent Overlapping Booking"

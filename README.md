@@ -52,6 +52,20 @@ A REST API for local businesses (salons, clinics, repair shops) to manage servic
 - `GET /api/bookings/` - List/Create bookings
 - `PATCH /api/bookings/{id}/` - Update booking status (confirm/cancel)
 
+## Architecture Notes
+
+- `appointments/core/models.py`: domain models and DB indexes.
+- `appointments/core/serializers.py`: validation, booking conflict checks, and payload shape.
+- `appointments/core/services.py`: availability slot engine.
+- `appointments/core/views.py`: REST viewsets and custom workflow endpoints.
+- `appointments/exceptions.py`: unified API error response structure.
+
+## Project Docs
+
+- API reference: `docs/API.md`
+- Product plan: `docs/project_plan.md`
+- Review checklist: `docs/review_checklist.md`
+
 ## License
 
 MIT

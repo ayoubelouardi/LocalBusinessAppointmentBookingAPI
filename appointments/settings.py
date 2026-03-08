@@ -1,4 +1,5 @@
 from pathlib import Path
+from urllib.parse import urlparse
 
 from appointments.env import get_bool, get_env, get_list
 
@@ -7,6 +8,13 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = get_env("DJANGO_SECRET_KEY", "dev-secret-key-change-in-production")
 
 DEBUG = get_bool("DJANGO_DEBUG", True)
+
+# Safety: prevent accidentally running production without a proper secret key.
+if not DEBUG and SECRET_KEY == "dev-secret-key-change-in-production":
+    raise RuntimeError(
+        "DJANGO_SECRET_KEY must be set in environment when DEBUG is False. "
+        "Generate a secure key and set it in your platform's secret manager."
+    )
 
 ALLOWED_HOSTS = get_list("DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1")
 
@@ -59,6 +67,19 @@ DATABASES = {
     }
 }
 
+database_url = get_env("DATABASE_URL")
+if database_url:
+    parsed = urlparse(database_url)
+    if parsed.scheme in {"postgres", "postgresql"}:
+        DATABASES["default"] = {
+            "ENGINE": "django.db.backends.postgresql",
+            "NAME": parsed.path.lstrip("/"),
+            "USER": parsed.username,
+            "PASSWORD": parsed.password,
+            "HOST": parsed.hostname,
+            "PORT": parsed.port or 5432,
+        }
+
 AUTH_PASSWORD_VALIDATORS = [
     {
         "NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"
@@ -74,6 +95,7 @@ USE_I18N = True
 USE_TZ = True
 
 STATIC_URL = "static/"
+STATIC_ROOT = BASE_DIR / "staticfiles"
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 

@@ -1,12 +1,19 @@
 from datetime import date
 
+from drf_spectacular.utils import extend_schema
 from rest_framework import viewsets
 from rest_framework.decorators import action
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from .models import Service, BusinessProfile, Booking
-from .serializers import ServiceSerializer, BusinessProfileSerializer, BookingSerializer
+from .serializers import (
+    ServiceSerializer,
+    BusinessProfileSerializer,
+    BookingSerializer,
+    AvailabilityResponseSerializer,
+    ScheduleResponseSerializer,
+)
 from .permissions import IsAdminOrReadOnly, IsAdminUser
 from .filters import filter_services
 from .services import get_available_slots
@@ -64,6 +71,7 @@ class BookingViewSet(viewsets.ModelViewSet):
 
 
 class AvailabilityView(APIView):
+    @extend_schema(responses=AvailabilityResponseSerializer)
     def get(self, request):
         raw_date = request.query_params.get("date")
         if not raw_date:
@@ -84,6 +92,7 @@ class AvailabilityView(APIView):
 class ScheduleView(APIView):
     permission_classes = [IsAuthenticated, IsAdminUser]
 
+    @extend_schema(responses=ScheduleResponseSerializer)
     def get(self, request):
         raw_date = request.query_params.get("date")
         if not raw_date:

@@ -88,3 +88,18 @@ class BookingSerializer(serializers.ModelSerializer):
     def update(self, instance, validated_data):
         validated_data.pop("end_time", None)
         return super().update(instance, validated_data)
+
+
+class AvailabilitySlotSerializer(serializers.Serializer):
+    start_time = serializers.CharField()
+    end_time = serializers.CharField()
+
+
+class AvailabilityResponseSerializer(serializers.Serializer):
+    date = serializers.CharField()
+    slots = AvailabilitySlotSerializer(many=True)
+
+
+class ScheduleResponseSerializer(serializers.Serializer):
+    date = serializers.CharField()
+    bookings = BookingSerializer(many=True)

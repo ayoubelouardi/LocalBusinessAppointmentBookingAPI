@@ -2,7 +2,7 @@
 
 set -euo pipefail
 
-BASE_URL="${BASE_URL:-http://127.0.0.1:8000}"
+BASE_URL="${BASE_URL:-http://127.0.0.1:8080}"
 ADMIN_USER="${ADMIN_USER:-admin}"
 ADMIN_PASS="${ADMIN_PASS:-admin12345}"
 PYTHON_BIN="${PYTHON_BIN:-./venv/bin/python}"
@@ -150,7 +150,7 @@ curl -sS -i "${BASE_URL}/api/schedule/?date=2026-03-20"
 
 echo
 echo "[14] OpenAPI Schema"
-# Step 15: Verify OpenAPI schema endpoint is available.
+# Step 15: Verify OpenAPI schema endpoint is available. download a yaml.
 curl -sS "${BASE_URL}/api/schema/" >/dev/null && echo "Schema endpoint reachable"
 
 echo

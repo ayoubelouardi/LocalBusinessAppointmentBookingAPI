@@ -1,88 +1,111 @@
-# Deployment Configuration — LocalBusinessAppointmentBookingAPI
+# Deployment Guide (General + Leapcell)
 
-This document captures the deployment settings used for hosting the Local Business Appointment Booking API and lists operational notes you should follow when deploying to a cloud service (example values provided based on the supplied inputs).
+This guide is validated against the current codebase and works as a general deployment reference for Django platforms (including Leapcell).
 
-Basic
-- Service name: `LocalBusinessAppointmentBookingAPI-1emrgal`
-- Workspace / Owner: `ayoubelouardioff2619` (as provided)
-- Region: N. Virginia, US East (AWS `us-east-1`)
+## What This Project Expects
 
-Source & runtime
+- Python runtime: `3.12` (or compatible 3.11+)
+- Web server: Gunicorn
+- Entrypoint: `appointments.wsgi:application`
+- HTTP port: from `$PORT` (default `8080`)
+- Database:
+  - Local/dev default: SQLite
+  - Production: PostgreSQL via `DATABASE_URL`
+
+## Required Environment Variables
+
+- `DJANGO_SECRET_KEY` (required in production)
+- `DJANGO_DEBUG=False` (required in production)
+- `DJANGO_ALLOWED_HOSTS` (comma-separated, no spaces)
+  - Example: `your-domain.com,.leapcell.dev,127.0.0.1`
+
+## Optional Environment Variables
+
+- `DATABASE_URL` (recommended for production)
+  - Example: `postgres://user:pass@host:5432/dbname`
+- `PORT` (platform usually injects this)
+- `GUNICORN_WORKERS` (default in script: `2`)
+
+## Build and Start Commands (Generic)
+
+Build command:
+
+```bash
+pip install -r requirements.txt
+```
+
+Start command:
+
+```bash
+bash scripts/deploy-production.sh
+```
+
+This start script will:
+1. Install requirements
+2. Run migrations
+3. Collect static files
+4. Start Gunicorn on `:$PORT`
+
+## Included Deployment Scripts
+
+- Production: `scripts/deploy-production.sh`
+- Development: `scripts/deploy-dev.sh`
+
+Run locally for production-like startup:
+
+```bash
+PORT=8080 DJANGO_DEBUG=False bash scripts/deploy-production.sh
+```
+
+Run locally for dev startup:
+
+```bash
+bash scripts/deploy-dev.sh
+```
+
+## Leapcell Configuration (Suggested)
+
+Use these values in Leapcell service settings:
+
 - Branch: `main`
-- Root directory: `./` (project root)
-- Framework preset: `django` (Django + DRF)
-- Runtime: `python3.12` (Debian slim variant suggested)
-
-Build & run
-- Build command:
-  ```bash
-  pip install -r requirements.txt
-  ```
-- Start command (example used by platform):
-  ```bash
-  _startup() { gunicorn --bind :8080 appointments.wsgi; }; _startup
-  ```
+- Root directory: `./`
+- Runtime: Python 3.12
+- Build command: `pip install -r requirements.txt`
+- Start command: `bash scripts/deploy-production.sh`
 - Serving port: `8080`
 
-Resources
-- Memory: `512 MB` (adjust to 1GB+ for production workloads)
-- CPU: `2 cores` (adjust depending on expected concurrency)
+Set environment variables in Leapcell:
 
-Environment variables (recommended)
-- DJANGO_SECRET_KEY — set to a secure secret in production (do NOT commit)
-- DJANGO_DEBUG — `False` in production
-- DJANGO_ALLOWED_HOSTS — comma-separated hosts (e.g. `example.com,127.0.0.1`)
-- DATABASE_URL — production database (Postgres) connection string, e.g. `postgres://user:pass@host:5432/dbname`
-- CELERY_BROKER_URL — if you add background jobs
-- SENTRY_DSN — optional error reporting
-- EMAIL_* variables — SMTP config if you send emails
+- `DJANGO_SECRET_KEY=<secure-random-value>`
+- `DJANGO_DEBUG=False`
+- `DJANGO_ALLOWED_HOSTS=<your-hostname>,.leapcell.dev`
+- `DATABASE_URL=<postgres-connection-url>` (recommended)
 
-Tip: the repo includes `appointments/env.py` which reads environment variables — ensure your platform injects the variables above.
+## Health Checks
 
-Pre-deploy / startup tasks
-- Run migrations at deploy time:
-  ```bash
-  python manage.py migrate --noinput
-  ```
-- Create an admin user if needed (one-time):
-  ```bash
-  python manage.py createsuperuser
-  ```
-- (Optional) Collect static files if you serve static assets via Django:
-  ```bash
-  python manage.py collectstatic --noinput
-  ```
+- Liveness endpoint: `GET /api/`
+- Readiness endpoint: `GET /api/schema/`
 
-Healthchecks and readiness
-- Liveness: HTTP GET `http://<service>:8080/api/` should return 200
-- Readiness: Run database migration check or call `http://<service>:8080/api/schema/` (OpenAPI schema endpoint)
+## Notes Verified Against Current Code
 
-Logging & monitoring
-- Use the platform's log drain/streaming to capture stdout/stderr — Gunicorn will write logs to stdout.
-- The project contains a basic LOGGING configuration (`appointments/settings.py`) that writes to console; integrate with Sentry or your logging provider for errors.
+- `DATABASE_URL` is now supported in `appointments/settings.py` for PostgreSQL.
+- `STATIC_ROOT` is configured as `staticfiles` for `collectstatic`.
+- Gunicorn target is `appointments.wsgi:application` (correct format).
 
-Database
-- Default in repo is SQLite for local development. For production, set `DATABASE_URL` to a managed Postgres instance and configure your platform accordingly.
-- Use connection pooling and add indexes for booking queries (this repo already creates indexes on booking fields for performance).
+## Common Deployment Errors and Fixes
 
-Security & secrets
-- Do not store secrets in repo. Use the platform's secret manager or environment variable system.
-- Ensure `DJANGO_DEBUG=False` in production and set `ALLOWED_HOSTS` accordingly.
-- Use HTTPS/TLS (the platform typically provides TLS termination).
+- **400 Bad Request / DisallowedHost**
+  - Fix: add your deployed hostname to `DJANGO_ALLOWED_HOSTS`.
+- **Database connection errors**
+  - Fix: verify `DATABASE_URL` format and network access.
+- **Migration errors on startup**
+  - Fix: ensure DB user has schema migration permissions.
+- **Static files missing in admin**
+  - Fix: keep `collectstatic --noinput` in startup script.
 
-Scaling & performance
-- Use at least 2 Gunicorn workers for concurrency: `gunicorn -w 2 --bind :8080 appointments.wsgi`
-- For high throughput, increase workers and memory and put the DB on a managed service.
+## Security Checklist
 
-Rollbacks & deployments
-- Apply migrations in a backward-compatible way when possible. If a migration is destructive, plan a two-step deploy (schema change without code that uses it, then code deploy).
-- Keep a database backup strategy before applying destructive migrations.
-
-FAQ / quick checklist
-- Ensure `pip install -r requirements.txt` completes in build step.
-- Ensure `python manage.py migrate --noinput` runs before traffic is routed.
-- Ensure `DJANGO_SECRET_KEY` and `DATABASE_URL` are set via the platform's environment/secret manager.
-- Expose port `8080` in platform settings.
-
-Contact
-- If you need provider-specific YAML/manifest or a Dockerfile, state the target provider (Vercel, Heroku, AWS Elastic Beanstalk, ECS, or DigitalOcean App Platform) and I'll produce the exact manifest.
+- `DJANGO_DEBUG=False`
+- strong `DJANGO_SECRET_KEY`
+- production database credentials stored in platform secrets
+- HTTPS enabled by platform

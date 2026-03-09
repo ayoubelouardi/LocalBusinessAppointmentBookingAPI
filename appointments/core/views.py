@@ -3,7 +3,7 @@ from datetime import date
 from drf_spectacular.utils import extend_schema
 from rest_framework import viewsets
 from rest_framework.decorators import action
-from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from .models import Service, BusinessProfile, Booking
@@ -22,7 +22,7 @@ from .services import get_available_slots
 class ServiceViewSet(viewsets.ModelViewSet):
     queryset = Service.objects.all()
     serializer_class = ServiceSerializer
-    permission_classes = [IsAdminOrReadOnly]
+    permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
         queryset = super().get_queryset()
@@ -42,7 +42,7 @@ class BookingViewSet(viewsets.ModelViewSet):
     def get_permissions(self):
         if self.action == "confirm":
             return [IsAuthenticated(), IsAdminUser()]
-        return [AllowAny()]
+        return [IsAuthenticated()]
 
     @action(detail=True, methods=["patch"], url_path="confirm")
     def confirm(self, request, pk=None):
@@ -71,6 +71,8 @@ class BookingViewSet(viewsets.ModelViewSet):
 
 
 class AvailabilityView(APIView):
+    permission_classes = [IsAuthenticated]
+
     @extend_schema(responses=AvailabilityResponseSerializer)
     def get(self, request):
         raw_date = request.query_params.get("date")
